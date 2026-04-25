@@ -23,9 +23,15 @@ function shuffle(items) {
 }
 
 function getTrayColumns(grid) {
-  if (grid === 2) return "repeat(4, minmax(76px, 1fr))";
-  if (grid === 3) return "repeat(3, minmax(86px, 1fr))";
-  return "repeat(4, minmax(72px, 1fr))";
+  if (grid === 2) return "repeat(4, minmax(0, 1fr))";
+  if (grid === 3) return "repeat(5, minmax(0, 1fr))";
+  return "repeat(8, minmax(0, 1fr))";
+}
+
+function getBoardSize(grid) {
+  if (grid === 2) return "min(62vh, 74vw, 560px)";
+  if (grid === 3) return "min(58vh, 72vw, 560px)";
+  return "min(54vh, 70vw, 560px)";
 }
 
 export default function PuzzleBoard({ puzzle, level, progress, onBack, onComplete }) {
@@ -118,20 +124,20 @@ export default function PuzzleBoard({ puzzle, level, progress, onBack, onComplet
   }
 
   return (
-    <div className="flex min-h-screen flex-col px-4 py-4 sm:px-6 md:px-10">
-      <header className="mb-3 flex items-center justify-between gap-3">
+    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden px-3 py-3 sm:px-5 md:px-8">
+      <header className="mb-2 flex shrink-0 items-center justify-between gap-3">
         <button
           onClick={onBack}
-          className="min-h-[62px] min-w-[62px] rounded-[22px] bg-white px-5 text-3xl font-black shadow-lg active:scale-95 md:min-h-[78px] md:min-w-[78px]"
+          className="min-h-[54px] min-w-[54px] rounded-[20px] bg-white px-4 text-2xl font-black shadow-lg active:scale-95 md:min-h-[66px] md:min-w-[66px] md:text-3xl"
         >
           ←
         </button>
 
         <div className="text-center">
-          <h2 className="text-2xl font-black leading-tight md:text-5xl">
+          <h2 className="text-2xl font-black leading-tight md:text-4xl">
             {puzzle.title}
           </h2>
-          <p className="text-base font-bold text-[#8a5a2c] md:text-2xl">
+          <p className="text-base font-bold text-[#8a5a2c] md:text-xl">
             {level.title}
           </p>
         </div>
@@ -142,13 +148,13 @@ export default function PuzzleBoard({ puzzle, level, progress, onBack, onComplet
           onPointerLeave={() => setShowHint(false)}
           onTouchStart={() => setShowHint(true)}
           onTouchEnd={() => setShowHint(false)}
-          className="min-h-[62px] min-w-[62px] rounded-[22px] bg-white px-4 text-2xl font-black shadow-lg active:scale-95 md:min-h-[78px] md:min-w-[78px]"
+          className="min-h-[54px] min-w-[54px] rounded-[20px] bg-white px-4 text-xl font-black shadow-lg active:scale-95 md:min-h-[66px] md:min-w-[66px] md:text-2xl"
         >
           👀
         </button>
       </header>
 
-      <div className="mb-3 text-center text-lg font-black text-[#7b4a24] md:text-2xl">
+      <div className="mb-2 shrink-0 text-center text-base font-black text-[#7b4a24] md:text-xl">
         Перетащи кусочки в пустые места
       </div>
 
@@ -157,73 +163,77 @@ export default function PuzzleBoard({ puzzle, level, progress, onBack, onComplet
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="mx-auto w-full max-w-[min(92vw,720px)] rounded-[34px] bg-white/80 p-3 shadow-2xl md:p-5">
+        <section className="flex min-h-0 flex-1 flex-col items-center justify-between gap-3">
           <div
-            className="relative grid gap-2 md:gap-3"
+            className="rounded-[30px] bg-white/80 p-2 shadow-2xl md:p-3"
             style={{
-              gridTemplateColumns: `repeat(${level.grid}, minmax(0, 1fr))`
+              width: getBoardSize(level.grid),
+              height: getBoardSize(level.grid)
             }}
           >
-            {Array.from({ length: level.pieces }, (_, index) => (
-              <PuzzleCell
-                key={index}
-                id={`cell-${index}`}
-                index={index}
-                grid={level.grid}
-                image={puzzle.image}
-                piece={placedPieces[index]}
-                showHint={showHint}
-                wrong={wrongCell === index}
-              />
-            ))}
+            <div
+              className="grid h-full w-full gap-2 md:gap-3"
+              style={{
+                gridTemplateColumns: `repeat(${level.grid}, minmax(0, 1fr))`
+              }}
+            >
+              {Array.from({ length: level.pieces }, (_, index) => (
+                <PuzzleCell
+                  key={index}
+                  id={`cell-${index}`}
+                  index={index}
+                  grid={level.grid}
+                  image={puzzle.image}
+                  piece={placedPieces[index]}
+                  showHint={showHint}
+                  wrong={wrongCell === index}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="mx-auto mt-5 w-full max-w-[min(94vw,840px)] rounded-[34px] bg-white/70 p-4 shadow-xl md:p-5">
-          <div className="mb-3 text-center text-xl font-black text-[#4a2a16] md:text-3xl">
-            Кусочки пазла
-          </div>
+          <div className="w-full max-w-[960px] shrink-0 rounded-[28px] bg-white/70 p-3 shadow-xl md:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <button
+                onClick={restartGame}
+                className="min-h-[50px] rounded-[20px] bg-[#ffcf5a] px-4 text-base font-black shadow-md active:scale-95 md:min-h-[58px] md:text-xl"
+              >
+                🔄 Сначала
+              </button>
 
-          <div
-            className="grid gap-3 md:gap-4"
-            style={{
-              gridTemplateColumns: getTrayColumns(level.grid)
-            }}
-          >
-            {trayPieces.map((piece) => (
-              <DraggablePiece
-                key={piece.id}
-                piece={piece}
-                grid={level.grid}
-                image={puzzle.image}
-              />
-            ))}
+              <div className="text-center text-base font-black text-[#8a5a2c] md:text-xl">
+                {solvedCount} / {level.pieces}
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowHint((prev) => !prev);
+                  playClick(progress.sound);
+                }}
+                className="min-h-[50px] rounded-[20px] bg-[#8ee06e] px-4 text-base font-black shadow-md active:scale-95 md:min-h-[58px] md:text-xl"
+              >
+                👀 Подсказка
+              </button>
+            </div>
+
+            <div
+              className="grid gap-2 md:gap-3"
+              style={{
+                gridTemplateColumns: getTrayColumns(level.grid)
+              }}
+            >
+              {trayPieces.map((piece) => (
+                <DraggablePiece
+                  key={piece.id}
+                  piece={piece}
+                  grid={level.grid}
+                  image={puzzle.image}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       </DndContext>
-
-      <div className="mx-auto mt-4 grid w-full max-w-[720px] grid-cols-2 gap-3">
-        <button
-          onClick={restartGame}
-          className="min-h-[72px] rounded-[28px] bg-[#ffcf5a] text-xl font-black shadow-xl active:scale-95 md:min-h-[88px] md:text-3xl"
-        >
-          🔄 Сначала
-        </button>
-
-        <button
-          onClick={() => {
-            setShowHint((prev) => !prev);
-            playClick(progress.sound);
-          }}
-          className="min-h-[72px] rounded-[28px] bg-[#8ee06e] text-xl font-black shadow-xl active:scale-95 md:min-h-[88px] md:text-3xl"
-        >
-          👀 Подсказка
-        </button>
-      </div>
-
-      <div className="mt-3 text-center text-lg font-black text-[#8a5a2c] md:text-2xl">
-        Собрано: {solvedCount} / {level.pieces}
-      </div>
     </div>
   );
 }
@@ -246,10 +256,10 @@ function PuzzleCell({ id, index, grid, image, piece, showHint, wrong }) {
     <div
       ref={setNodeRef}
       className={[
-        "relative aspect-square overflow-hidden rounded-[18px] border-[5px] transition-all md:rounded-[24px] md:border-[7px]",
+        "relative aspect-square overflow-hidden rounded-[16px] border-[4px] transition-all md:rounded-[22px] md:border-[6px]",
         piece
           ? "border-green-400 bg-white shadow-lg"
-          : "border-dashed border-[#e5c989] bg-[#fff8dc]",
+          : "border-dashed border-[#d9bd7c] bg-[#fff8dc]",
         isOver && !piece ? "scale-[1.04] border-[#ff8a3d] bg-[#fff0b8]" : "",
         wrong ? "animate-pulse border-red-400 bg-red-100" : ""
       ].join(" ")}
@@ -262,7 +272,7 @@ function PuzzleCell({ id, index, grid, image, piece, showHint, wrong }) {
       )}
 
       {!piece && (
-        <div className="absolute inset-0 flex items-center justify-center text-3xl opacity-25 md:text-5xl">
+        <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-25 md:text-4xl">
           🧩
         </div>
       )}
@@ -296,7 +306,7 @@ function DraggablePiece({ piece, grid, image }) {
   const style = {
     transform: transform
       ? `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${
-          isDragging ? 1.18 : 1
+          isDragging ? 1.15 : 1
         })`
       : undefined,
     backgroundImage: `url("${image}")`,
@@ -311,7 +321,7 @@ function DraggablePiece({ piece, grid, image }) {
       ref={setNodeRef}
       style={style}
       className={[
-        "puzzle-piece aspect-square w-full min-w-[72px] rounded-[18px] border-[5px] border-white bg-cover bg-no-repeat shadow-xl transition-shadow md:min-w-[96px] md:rounded-[24px] md:border-[7px]",
+        "puzzle-piece aspect-square w-full rounded-[14px] border-[4px] border-white bg-cover bg-no-repeat shadow-lg transition-shadow md:rounded-[20px] md:border-[6px]",
         isDragging ? "z-50 opacity-90 shadow-2xl" : "z-10"
       ].join(" ")}
       {...listeners}
