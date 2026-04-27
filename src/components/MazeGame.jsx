@@ -1,183 +1,205 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { playClick, playSnap, playVictory, speak } from "../lib/audio.js";
 
-const MAZE_LEVELS = [
+const LEVELS = [
   {
-    id: "maze-1",
     title: "К звёздочке",
-    grid: [
-      [1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 1],
-      [1, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1],
-      [1, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1]
-    ],
-    start: { x: 1, y: 1 },
-    goal: { x: 3, y: 4 }
+    goal: "⭐",
+    path: [
+      { x: 16, y: 76 },
+      { x: 28, y: 76 },
+      { x: 28, y: 55 },
+      { x: 48, y: 55 },
+      { x: 48, y: 34 },
+      { x: 72, y: 34 },
+      { x: 82, y: 22 }
+    ]
   },
   {
-    id: "maze-2",
     title: "К конфетке",
-    grid: [
-      [1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 1, 1],
-      [1, 1, 1, 0, 0, 1],
-      [1, 0, 0, 0, 1, 1],
-      [1, 0, 1, 0, 0, 1],
-      [1, 0, 1, 1, 0, 1],
-      [1, 1, 1, 1, 1, 1]
-    ],
-    start: { x: 1, y: 1 },
-    goal: { x: 4, y: 5 }
+    goal: "🍭",
+    path: [
+      { x: 15, y: 72 },
+      { x: 35, y: 72 },
+      { x: 35, y: 48 },
+      { x: 58, y: 48 },
+      { x: 58, y: 28 },
+      { x: 82, y: 28 }
+    ]
   },
   {
-    id: "maze-3",
     title: "К подарку",
-    grid: [
-      [1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 1, 0, 1],
-      [1, 1, 0, 1, 0, 1],
-      [1, 0, 0, 0, 0, 1],
-      [1, 0, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1]
-    ],
-    start: { x: 1, y: 1 },
-    goal: { x: 4, y: 5 }
-  },
-  {
-    id: "maze-4",
-    title: "К сердечку",
-    grid: [
-      [1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 1, 0, 1],
-      [1, 0, 1, 0, 1, 0, 1],
-      [1, 0, 1, 0, 0, 0, 1],
-      [1, 0, 1, 1, 1, 0, 1],
-      [1, 0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1]
-    ],
-    start: { x: 1, y: 1 },
-    goal: { x: 5, y: 1 }
+    goal: "🎁",
+    path: [
+      { x: 16, y: 80 },
+      { x: 16, y: 58 },
+      { x: 38, y: 58 },
+      { x: 38, y: 38 },
+      { x: 62, y: 38 },
+      { x: 62, y: 62 },
+      { x: 82, y: 62 }
+    ]
   }
 ];
 
-const GOAL_ICONS = ["⭐", "🍭", "🎁", "❤️"];
+function distanceToSegment(point, a, b) {
+  const px = point.x;
+  const py = point.y;
+  const ax = a.x;
+  const ay = a.y;
+  const bx = b.x;
+  const by = b.y;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(px - ax, py - ay);
+  }
+
+  const t = Math.max(
+    0,
+    Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))
+  );
+
+  const closestX = ax + t * dx;
+  const closestY = ay + t * dy;
+
+  return Math.hypot(px - closestX, py - closestY);
+}
+
+function isNearPath(point, path, tolerance = 10) {
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const distance = distanceToSegment(point, path[i], path[i + 1]);
+
+    if (distance <= tolerance) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getNearestPathPoint(point, path) {
+  let nearest = path[0];
+  let bestDistance = Infinity;
+
+  for (const pathPoint of path) {
+    const distance = Math.hypot(point.x - pathPoint.x, point.y - pathPoint.y);
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      nearest = pathPoint;
+    }
+  }
+
+  return nearest;
+}
 
 export default function MazeGame({ progress, onBack }) {
   const [levelIndex, setLevelIndex] = useState(0);
-  const [player, setPlayer] = useState(MAZE_LEVELS[0].start);
+  const [catPosition, setCatPosition] = useState(LEVELS[0].path[0]);
+  const [dragging, setDragging] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [bump, setBump] = useState(false);
-  const touchStartRef = useRef(null);
+  const [warning, setWarning] = useState(false);
 
-  const level = MAZE_LEVELS[levelIndex];
-  const goalIcon = GOAL_ICONS[levelIndex % GOAL_ICONS.length];
-
-  const rows = level.grid.length;
-  const cols = level.grid[0].length;
-
-  const cellSize = useMemo(() => {
-    const maxCols = Math.max(cols, rows);
-    if (maxCols <= 5) return "min(13.5vw, 13.5vh, 86px)";
-    if (maxCols === 6) return "min(12vw, 12vh, 76px)";
-    return "min(10.5vw, 10.5vh, 68px)";
-  }, [cols, rows]);
+  const boardRef = useRef(null);
+  const level = LEVELS[levelIndex];
+  const start = level.path[0];
+  const goal = level.path[level.path.length - 1];
 
   useEffect(() => {
     resetLevel();
   }, [levelIndex]);
 
   function resetLevel() {
-    const nextLevel = MAZE_LEVELS[levelIndex];
-    setPlayer(nextLevel.start);
+    const nextLevel = LEVELS[levelIndex];
+
+    setCatPosition(nextLevel.path[0]);
+    setDragging(false);
     setCompleted(false);
-    setBump(false);
+    setWarning(false);
   }
 
-  function isWall(x, y) {
-    if (!level.grid[y]) return true;
-    return level.grid[y][x] === 1 || level.grid[y][x] === undefined;
+  function getPointFromEvent(event) {
+    const rect = boardRef.current.getBoundingClientRect();
+
+    const clientX = event.touches?.[0]?.clientX ?? event.clientX;
+    const clientY = event.touches?.[0]?.clientY ?? event.clientY;
+
+    return {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100
+    };
   }
 
-  function move(dx, dy) {
+  function handleDragStart(event) {
     if (completed) return;
 
-    const nextX = player.x + dx;
-    const nextY = player.y + dy;
+    event.preventDefault();
+    setDragging(true);
+    playClick(progress.sound);
+    speak("Веди котика", progress.voice);
+  }
 
-    if (isWall(nextX, nextY)) {
-      setBump(true);
-      playClick(progress.sound);
-      speak("Там стенка", progress.voice);
+  function handleDragMove(event) {
+    if (!dragging || completed) return;
 
-      setTimeout(() => {
-        setBump(false);
-      }, 350);
+    event.preventDefault();
 
+    const point = getPointFromEvent(event);
+    const nearPath = isNearPath(point, level.path, 11);
+
+    if (nearPath) {
+      setCatPosition(point);
+      setWarning(false);
       return;
     }
 
-    const nextPlayer = { x: nextX, y: nextY };
-    setPlayer(nextPlayer);
-    playSnap(progress.sound);
+    setWarning(true);
 
-    if (nextX === level.goal.x && nextY === level.goal.y) {
+    const nearest = getNearestPathPoint(point, level.path);
+    setCatPosition(nearest);
+  }
+
+  function handleDragEnd() {
+    if (!dragging || completed) return;
+
+    setDragging(false);
+
+    const distanceToGoal = Math.hypot(
+      catPosition.x - goal.x,
+      catPosition.y - goal.y
+    );
+
+    if (distanceToGoal <= 11) {
+      setCatPosition(goal);
       setCompleted(true);
+      setWarning(false);
 
-      setTimeout(() => {
-        playVictory(progress.sound);
-        speak("Молодец! Ты дошла!", progress.voice);
-      }, 250);
+      playVictory(progress.sound);
+      speak("Молодец! Котик дошёл!", progress.voice);
+      return;
+    }
+
+    if (warning) {
+      playClick(progress.sound);
+      speak("Идём по дорожке", progress.voice);
+    } else {
+      playSnap(progress.sound);
     }
   }
 
   function nextLevel() {
-    setLevelIndex((prev) => (prev + 1) % MAZE_LEVELS.length);
+    setLevelIndex((prev) => (prev + 1) % LEVELS.length);
     playClick(progress.sound);
-    speak("Следующий лабиринт", progress.voice);
+    speak("Следующая дорожка", progress.voice);
   }
 
   function previousLevel() {
-    setLevelIndex((prev) =>
-      prev === 0 ? MAZE_LEVELS.length - 1 : prev - 1
-    );
+    setLevelIndex((prev) => (prev === 0 ? LEVELS.length - 1 : prev - 1));
     playClick(progress.sound);
-  }
-
-  function handleTouchStart(event) {
-    const touch = event.touches[0];
-
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY
-    };
-  }
-
-  function handleTouchEnd(event) {
-    if (!touchStartRef.current) return;
-
-    const touch = event.changedTouches[0];
-
-    const dx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
-
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-
-    touchStartRef.current = null;
-
-    if (Math.max(absX, absY) < 24) return;
-
-    if (absX > absY) {
-      if (dx > 0) move(1, 0);
-      else move(-1, 0);
-    } else {
-      if (dy > 0) move(0, 1);
-      else move(0, -1);
-    }
   }
 
   return (
@@ -192,7 +214,7 @@ export default function MazeGame({ progress, onBack }) {
 
         <div className="text-center">
           <h1 className="text-2xl font-black leading-none md:text-4xl">
-            Лабиринт
+            Дорожка
           </h1>
           <p className="mt-1 text-base font-black text-[#8a5a2c] md:text-xl">
             {level.title}
@@ -207,73 +229,120 @@ export default function MazeGame({ progress, onBack }) {
         </button>
       </header>
 
-      <div className="mb-2 shrink-0 text-center text-base font-black text-[#7b4a24] md:text-xl">
-        Проведи пальцем: вверх, вниз, вправо или влево
+      <div className="mb-3 shrink-0 text-center text-base font-black text-[#7b4a24] md:text-xl">
+        Возьми котика и веди по дорожке
       </div>
 
-      <section className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
+      <section className="flex min-h-0 flex-1 items-center justify-center">
         <motion.div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          animate={bump ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
-          transition={{ duration: 0.3 }}
-          className="rounded-[34px] bg-white/80 p-3 shadow-2xl md:p-4"
+          animate={warning ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+          transition={{ duration: 0.25 }}
+          ref={boardRef}
+          onMouseMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
+          className="relative aspect-square w-full max-w-[min(92vw,72vh,720px)] overflow-hidden rounded-[42px] bg-[#fff4c7] shadow-2xl"
         >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#ffffff_0,#ffffff_10%,transparent_11%),radial-gradient(circle_at_75%_30%,#ffffff_0,#ffffff_8%,transparent_9%),radial-gradient(circle_at_35%_80%,#ffffff_0,#ffffff_7%,transparent_8%)] opacity-50" />
+
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            <polyline
+              points={level.path.map((point) => `${point.x},${point.y}`).join(" ")}
+              fill="none"
+              stroke="#f0c05a"
+              strokeWidth="15"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            <polyline
+              points={level.path.map((point) => `${point.x},${point.y}`).join(" ")}
+              fill="none"
+              stroke="#fff4b8"
+              strokeWidth="9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            <polyline
+              points={level.path.map((point) => `${point.x},${point.y}`).join(" ")}
+              fill="none"
+              stroke="#ffcf5a"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray="2 4"
+            />
+          </svg>
+
           <div
-            className="grid gap-2 md:gap-3"
+            className="absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
             style={{
-              gridTemplateColumns: `repeat(${cols}, ${cellSize})`
+              left: `${start.x}%`,
+              top: `${start.y}%`
             }}
           >
-            {level.grid.map((row, y) =>
-              row.map((cell, x) => {
-                const isPlayer = player.x === x && player.y === y;
-                const isGoal = level.goal.x === x && level.goal.y === y;
-
-                return (
-                  <MazeCell
-                    key={`${x}-${y}`}
-                    wall={cell === 1}
-                    player={isPlayer}
-                    goal={isGoal}
-                    goalIcon={goalIcon}
-                    completed={completed}
-                  />
-                );
-              })
-            )}
+            🏠
           </div>
+
+          <motion.div
+            animate={completed ? { scale: [1, 1.25, 1] } : { scale: [1, 1.08, 1] }}
+            transition={{ repeat: Infinity, duration: completed ? 0.6 : 1.2 }}
+            className="absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
+            style={{
+              left: `${goal.x}%`,
+              top: `${goal.y}%`
+            }}
+          >
+            {level.goal}
+          </motion.div>
+
+          <motion.button
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            animate={{
+              left: `${catPosition.x}%`,
+              top: `${catPosition.y}%`,
+              scale: dragging ? 1.16 : 1
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 420,
+              damping: 28
+            }}
+            className="absolute z-30 flex h-[86px] w-[86px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-300 text-5xl shadow-2xl active:scale-110 md:h-[112px] md:w-[112px] md:text-7xl"
+          >
+            🐱
+          </motion.button>
+
+          {warning && (
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-[28px] bg-white/95 px-5 py-3 text-xl font-black text-[#8a5a2c] shadow-xl">
+              По дорожке 😊
+            </div>
+          )}
+
+          {completed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.75, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="absolute inset-x-5 bottom-5 rounded-[34px] bg-white/95 px-5 py-4 text-center shadow-2xl"
+            >
+              <div className="text-5xl">🎉</div>
+              <div className="text-3xl font-black text-[#ff7a2f]">
+                Молодец!
+              </div>
+              <div className="text-lg font-bold text-[#8a5a2c]">
+                Котик дошёл
+              </div>
+            </motion.div>
+          )}
         </motion.div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div />
-
-          <MoveButton onClick={() => move(0, -1)}>
-            ⬆️
-          </MoveButton>
-
-          <div />
-
-          <MoveButton onClick={() => move(-1, 0)}>
-            ⬅️
-          </MoveButton>
-
-          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-[22px] bg-white/70 text-2xl font-black shadow-md md:h-[76px] md:w-[76px]">
-            🐾
-          </div>
-
-          <MoveButton onClick={() => move(1, 0)}>
-            ➡️
-          </MoveButton>
-
-          <div />
-
-          <MoveButton onClick={() => move(0, 1)}>
-            ⬇️
-          </MoveButton>
-
-          <div />
-        </div>
       </section>
 
       <footer className="mt-3 grid shrink-0 grid-cols-2 gap-3">
@@ -291,79 +360,6 @@ export default function MazeGame({ progress, onBack }) {
           Дальше →
         </button>
       </footer>
-
-      {completed && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="pointer-events-none fixed inset-x-4 bottom-24 z-50 rounded-[34px] bg-white/95 px-6 py-5 text-center shadow-2xl md:bottom-28 md:left-1/2 md:w-[520px] md:-translate-x-1/2"
-        >
-          <div className="text-5xl">🎉</div>
-          <div className="mt-2 text-3xl font-black text-[#ff7a2f]">
-            Молодец!
-          </div>
-          <div className="text-xl font-bold text-[#8a5a2c]">
-            Котик дошёл до цели
-          </div>
-        </motion.div>
-      )}
     </div>
-  );
-}
-
-function MazeCell({ wall, player, goal, goalIcon, completed }) {
-  return (
-    <div
-      className={[
-        "relative flex aspect-square items-center justify-center rounded-[18px] border-[4px] shadow-md md:rounded-[24px] md:border-[5px]",
-        wall
-          ? "border-[#6b3b1d] bg-[#8a5a2c]"
-          : "border-[#f1d993] bg-[#fff5c7]"
-      ].join(" ")}
-    >
-      {!wall && (
-        <div className="absolute inset-1 rounded-[14px] bg-white/25 md:rounded-[18px]" />
-      )}
-
-      {goal && (
-        <motion.div
-          animate={completed ? { scale: [1, 1.35, 1] } : { scale: [1, 1.12, 1] }}
-          transition={{
-            repeat: Infinity,
-            duration: completed ? 0.55 : 1.2
-          }}
-          className="relative z-10 text-3xl md:text-5xl"
-        >
-          {goalIcon}
-        </motion.div>
-      )}
-
-      {player && (
-        <motion.div
-          layout
-          initial={{ scale: 0.8 }}
-          animate={{ scale: completed ? [1, 1.25, 1] : 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 380,
-            damping: 20
-          }}
-          className="relative z-20 text-3xl md:text-5xl"
-        >
-          🐱
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-function MoveButton({ onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex h-[64px] w-[64px] items-center justify-center rounded-[22px] bg-white text-2xl font-black shadow-xl active:scale-95 md:h-[76px] md:w-[76px] md:text-3xl"
-    >
-      {children}
-    </button>
   );
 }
