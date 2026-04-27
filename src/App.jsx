@@ -4,6 +4,7 @@ import HomeScreen from "./components/HomeScreen.jsx";
 import LevelSelect from "./components/LevelSelect.jsx";
 import PuzzleBoard from "./components/PuzzleBoard.jsx";
 import VictoryScreen from "./components/VictoryScreen.jsx";
+import FindDiffGame from "./components/FindDiffGame.jsx";
 import { PUZZLES, LEVELS } from "./data/puzzles.js";
 import { addSolved, loadProgress, saveProgress } from "./lib/storage.js";
 import { playVictory, speak, startMusic, stopMusic } from "./lib/audio.js";
@@ -16,65 +17,123 @@ export default function App() {
 
   useEffect(() => {
     saveProgress(progress);
-    if (progress.sound) startMusic(true);
-    else stopMusic();
+
+    if (progress.sound) {
+      startMusic(true);
+    } else {
+      stopMusic();
+    }
   }, [progress]);
 
-  const currentIndex = useMemo(() => PUZZLES.findIndex((p) => p.id === selectedPuzzle.id), [selectedPuzzle]);
+  const currentIndex = useMemo(() => {
+    return PUZZLES.findIndex((puzzle) => puzzle.id === selectedPuzzle.id);
+  }, [selectedPuzzle]);
 
-  function startGame() {
+  function startPuzzleMenu() {
     startMusic(progress.sound);
     setScreen("select");
+  }
+
+  function startFindDiffGame() {
+    startMusic(progress.sound);
+    setScreen("find-diff");
   }
 
   function chooseGame(puzzle, level) {
     setSelectedPuzzle(puzzle);
     setSelectedLevel(level);
-    setProgress((prev) => ({ ...prev, lastPuzzleId: puzzle.id }));
+
+    setProgress((prev) => ({
+      ...prev,
+      lastPuzzleId: puzzle.id
+    }));
+
     setScreen("game");
   }
 
   function completeGame() {
     const next = addSolved(progress, selectedPuzzle.id, selectedLevel.key);
+
     setProgress(next);
     playVictory(progress.sound);
     speak("Молодец!", progress.voice);
     setScreen("victory");
   }
 
+  function playAgain() {
+    setScreen("game");
+  }
+
   function nextPuzzle() {
     const next = PUZZLES[(currentIndex + 1) % PUZZLES.length];
+
     setSelectedPuzzle(next);
     setScreen("select");
   }
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#fff7d6] text-[#442612]">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-20 -left-20 h-64 w-64 rounded-full bg-yellow-300/50 blur-3xl" />
-        <div className="absolute top-24 -right-20 h-72 w-72 rounded-full bg-pink-300/40 blur-3xl" />
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-yellow-300/50 blur-3xl" />
+        <div className="absolute -right-20 top-24 h-72 w-72 rounded-full bg-pink-300/40 blur-3xl" />
         <div className="absolute -bottom-20 left-24 h-72 w-72 rounded-full bg-sky-300/40 blur-3xl" />
       </div>
 
       <AnimatePresence mode="wait">
         {screen === "home" && (
           <Screen keyName="home">
-            <HomeScreen progress={progress} onProgress={setProgress} onPlay={startGame} />
+            <HomeScreen
+              progress={progress}
+              onProgress={setProgress}
+              onPlay={startPuzzleMenu}
+              onFindDiff={startFindDiffGame}
+            />
           </Screen>
         )}
+
         {screen === "select" && (
           <Screen keyName="select">
-            <LevelSelect puzzles={PUZZLES} levels={LEVELS} progress={progress} onBack={() => setScreen("home")} onChoose={chooseGame} />
+            <LevelSelect
+              puzzles={PUZZLES}
+              levels={LEVELS}
+              progress={progress}
+              onBack={() => setScreen("home")}
+              onChoose={chooseGame}
+            />
           </Screen>
         )}
+
         {screen === "game" && (
           <Screen keyName={`${selectedPuzzle.id}_${selectedLevel.key}`}>
-            <PuzzleBoard puzzle={selectedPuzzle} level={selectedLevel} progress={progress} onBack={() => setScreen("select")} onComplete={completeGame} />
+            <PuzzleBoard
+              puzzle={selectedPuzzle}
+              level={selectedLevel}
+              progress={progress}
+              onBack={() => setScreen("select")}
+              onComplete={completeGame}
+            />
           </Screen>
         )}
+
         {screen === "victory" && (
           <Screen keyName="victory">
-            <VictoryScreen puzzle={selectedPuzzle} level={selectedLevel} progress={progress} onAgain={() => setScreen("game")} onNext={nextPuzzle} onHome={() => setScreen("select")} />
+            <VictoryScreen
+              puzzle={selectedPuzzle}
+              level={selectedLevel}
+              progress={progress}
+              onAgain={playAgain}
+              onNext={nextPuzzle}
+              onHome={() => setScreen("select")}
+            />
+          </Screen>
+        )}
+
+        {screen === "find-diff" && (
+          <Screen keyName="find-diff">
+            <FindDiffGame
+              progress={progress}
+              onBack={() => setScreen("home")}
+            />
           </Screen>
         )}
       </AnimatePresence>
