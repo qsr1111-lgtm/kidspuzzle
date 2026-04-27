@@ -21,11 +21,11 @@ export default function FindDiffGame({ progress, onBack }) {
   useEffect(() => {
     if (found.length === total && total > 0) {
       playVictory(progress.sound);
-      speak("Молодец! Ты нашла все отличия!", progress.voice);
+      speak("Молодец! Все отличия найдены!", progress.voice);
 
       const timer = setTimeout(() => {
         setShowWin(true);
-      }, 500);
+      }, 600);
 
       return () => clearTimeout(timer);
     }
@@ -46,12 +46,17 @@ export default function FindDiffGame({ progress, onBack }) {
 
     setTimeout(() => {
       setWrongTap(false);
-    }, 400);
+    }, 450);
   }
 
   function nextLevel() {
-    const next = (levelIndex + 1) % FIND_DIFF_LEVELS.length;
-    setLevelIndex(next);
+    setLevelIndex((prev) => (prev + 1) % FIND_DIFF_LEVELS.length);
+  }
+
+  function prevLevel() {
+    setLevelIndex((prev) =>
+      prev === 0 ? FIND_DIFF_LEVELS.length - 1 : prev - 1
+    );
   }
 
   function restartLevel() {
@@ -113,7 +118,7 @@ export default function FindDiffGame({ progress, onBack }) {
   }
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden px-3 py-3 sm:px-5">
+    <div className="flex min-h-[100dvh] flex-col px-3 py-3 sm:px-5 md:h-[100dvh] md:max-h-[100dvh] md:overflow-hidden">
       <header className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <button
           onClick={onBack}
@@ -140,10 +145,10 @@ export default function FindDiffGame({ progress, onBack }) {
       </header>
 
       <div className="mb-3 shrink-0 text-center text-base font-black text-[#7b4a24] md:text-xl">
-        Нажми на то, что отличается
+        Нажми на отличие
       </div>
 
-      <section className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
+      <section className="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-2">
         <PictureCard
           title="Картинка 1"
           image={level.image}
@@ -167,15 +172,13 @@ export default function FindDiffGame({ progress, onBack }) {
         />
       </section>
 
-      <div className="mt-3 grid shrink-0 grid-cols-2 gap-3">
+      <div className="mx-auto mt-4 grid w-full max-w-[760px] shrink-0 grid-cols-2 gap-3">
         <button
           onClick={() => {
-            const prev =
-              levelIndex === 0 ? FIND_DIFF_LEVELS.length - 1 : levelIndex - 1;
-            setLevelIndex(prev);
+            prevLevel();
             playClick(progress.sound);
           }}
-          className="min-h-[58px] rounded-[24px] bg-white text-xl font-black shadow-lg active:scale-95 md:min-h-[70px]"
+          className="min-h-[62px] rounded-[24px] bg-white text-xl font-black shadow-lg active:scale-95 md:min-h-[72px]"
         >
           ← Назад
         </button>
@@ -185,7 +188,7 @@ export default function FindDiffGame({ progress, onBack }) {
             nextLevel();
             playClick(progress.sound);
           }}
-          className="min-h-[58px] rounded-[24px] bg-[#8ee06e] text-xl font-black shadow-lg active:scale-95 md:min-h-[70px]"
+          className="min-h-[62px] rounded-[24px] bg-[#8ee06e] text-xl font-black shadow-lg active:scale-95 md:min-h-[72px]"
         >
           Дальше →
         </button>
@@ -207,7 +210,7 @@ function PictureCard({
   return (
     <div
       className={[
-        "flex min-h-0 flex-col rounded-[30px] bg-white/80 p-3 shadow-2xl transition-all md:p-4",
+        "rounded-[30px] bg-white/80 p-3 shadow-2xl transition-all md:flex md:min-h-0 md:flex-col md:p-4",
         wrongTap ? "ring-4 ring-red-300" : ""
       ].join(" ")}
     >
@@ -217,7 +220,7 @@ function PictureCard({
 
       <div
         onClick={onWrongTap}
-        className="relative mx-auto aspect-square max-h-full w-full max-w-[min(86vw,620px)] overflow-hidden rounded-[26px] bg-[#fff8dc] shadow-inner"
+        className="relative mx-auto aspect-square w-full max-w-[520px] overflow-hidden rounded-[26px] bg-[#fff8dc] shadow-inner md:max-h-[calc(100dvh-250px)] md:max-w-full"
       >
         <img
           src={image}
@@ -228,10 +231,7 @@ function PictureCard({
 
         {isChanged &&
           differences.map((diff) => (
-            <DifferenceVisual
-              key={diff.id}
-              diff={diff}
-            />
+            <DifferenceVisual key={diff.id} diff={diff} />
           ))}
 
         {differences.map((diff) => (
@@ -254,12 +254,12 @@ function DifferenceTapZone({ diff, found, onCorrect }) {
         event.stopPropagation();
         onCorrect(diff);
       }}
-      className="absolute rounded-full"
+      className="absolute z-30 rounded-full"
       style={{
         left: `${diff.x}%`,
         top: `${diff.y}%`,
-        width: `${diff.size + 9}%`,
-        height: `${diff.size + 9}%`,
+        width: `${diff.size + 12}%`,
+        height: `${diff.size + 12}%`,
         transform: "translate(-50%, -50%)"
       }}
       aria-label="Отличие"
@@ -287,7 +287,7 @@ function DifferenceVisual({ diff }) {
   if (diff.type === "star") {
     return (
       <div
-        className="absolute flex items-center justify-center text-4xl md:text-6xl"
+        className="absolute z-20 flex items-center justify-center text-4xl drop-shadow-lg md:text-6xl"
         style={{
           left: `${diff.x}%`,
           top: `${diff.y}%`,
@@ -302,7 +302,7 @@ function DifferenceVisual({ diff }) {
   if (diff.type === "heart") {
     return (
       <div
-        className="absolute flex items-center justify-center text-4xl md:text-6xl"
+        className="absolute z-20 flex items-center justify-center text-4xl drop-shadow-lg md:text-6xl"
         style={{
           left: `${diff.x}%`,
           top: `${diff.y}%`,
@@ -317,7 +317,7 @@ function DifferenceVisual({ diff }) {
   if (diff.type === "flower") {
     return (
       <div
-        className="absolute flex items-center justify-center text-4xl md:text-6xl"
+        className="absolute z-20 flex items-center justify-center text-4xl drop-shadow-lg md:text-6xl"
         style={{
           left: `${diff.x}%`,
           top: `${diff.y}%`,
@@ -332,7 +332,7 @@ function DifferenceVisual({ diff }) {
   if (diff.type === "square") {
     return (
       <div
-        className="absolute rounded-[18px] border-[5px] border-white shadow-xl"
+        className="absolute z-20 rounded-[18px] border-[5px] border-white shadow-xl"
         style={{
           ...commonStyle,
           backgroundColor: diff.color
@@ -343,7 +343,7 @@ function DifferenceVisual({ diff }) {
 
   return (
     <div
-      className="absolute rounded-full border-[5px] border-white shadow-xl"
+      className="absolute z-20 rounded-full border-[5px] border-white shadow-xl"
       style={{
         ...commonStyle,
         backgroundColor: diff.color
