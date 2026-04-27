@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { playClick, speak, startMusic, stopMusic } from "../lib/audio.js";
 
@@ -7,19 +8,33 @@ export default function HomeScreen({
   onPlay,
   onFindDiff
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   function toggleSound() {
     const nextSound = !progress.sound;
-    onProgress({ ...progress, sound: nextSound });
 
-    if (nextSound) startMusic(true);
-    else stopMusic();
+    onProgress({
+      ...progress,
+      sound: nextSound
+    });
+
+    if (nextSound) {
+      startMusic(true);
+    } else {
+      stopMusic();
+    }
 
     playClick(true);
   }
 
   function toggleVoice() {
     const nextVoice = !progress.voice;
-    onProgress({ ...progress, voice: nextVoice });
+
+    onProgress({
+      ...progress,
+      voice: nextVoice
+    });
+
     playClick(progress.sound);
 
     if (nextVoice) {
@@ -29,7 +44,7 @@ export default function HomeScreen({
 
   function handlePlay() {
     playClick(progress.sound);
-    speak("Выбери картинку", progress.voice);
+    speak("Собираем пазл", progress.voice);
     onPlay();
   }
 
@@ -39,64 +54,95 @@ export default function HomeScreen({
     onFindDiff();
   }
 
+  function toggleSettings() {
+    setSettingsOpen((prev) => !prev);
+    playClick(progress.sound);
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-5 py-8 text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 py-8 text-center">
+      <button
+        onClick={toggleSettings}
+        className="absolute right-5 top-5 z-20 flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-3xl font-black shadow-xl active:scale-95 md:right-8 md:top-8 md:h-20 md:w-20 md:text-4xl"
+        aria-label="Настройки"
+      >
+        ⚙️
+      </button>
+
+      {settingsOpen && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85, y: -12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="absolute right-5 top-24 z-30 w-[270px] rounded-[32px] bg-white/95 p-4 shadow-2xl md:right-8 md:top-32"
+        >
+          <div className="mb-3 text-2xl font-black text-[#4a2a16]">
+            Настройки
+          </div>
+
+          <div className="grid gap-3">
+            <button
+              onClick={toggleSound}
+              className="min-h-[66px] rounded-[24px] bg-[#fff1b8] px-4 text-xl font-black shadow-md active:scale-95"
+            >
+              {progress.sound ? "🔊 Музыка включена" : "🔇 Музыка выключена"}
+            </button>
+
+            <button
+              onClick={toggleVoice}
+              className="min-h-[66px] rounded-[24px] bg-[#dff6ff] px-4 text-xl font-black shadow-md active:scale-95"
+            >
+              {progress.voice ? "🗣 Голос включён" : "🤫 Голос выключен"}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ rotate: -4, scale: 0.9 }}
         animate={{ rotate: [0, -2, 2, 0], scale: 1 }}
-        transition={{ repeat: Infinity, repeatDelay: 2.5, duration: 1.4 }}
-        className="mb-5 flex h-40 w-40 items-center justify-center rounded-[48px] bg-orange-300 shadow-2xl"
+        transition={{
+          repeat: Infinity,
+          repeatDelay: 2.5,
+          duration: 1.4
+        }}
+        className="mb-5 flex h-40 w-40 items-center justify-center rounded-[48px] bg-orange-300 shadow-2xl md:h-52 md:w-52 md:rounded-[60px]"
       >
-        <div className="text-8xl">🐱</div>
+        <div className="text-8xl md:text-9xl">🐱</div>
       </motion.div>
 
-      <h1 className="mb-3 text-5xl font-black leading-none text-[#4a2a16]">
-        Котики
+      <h1 className="mb-3 text-5xl font-black leading-none text-[#4a2a16] md:text-7xl">
+        Давай
         <br />
-        Игры
+        играть!
       </h1>
 
-      <p className="mb-6 max-w-xs text-xl font-bold text-[#7b4a24]">
-        Пазлы и отличия для маленького игрока
+      <p className="mb-7 max-w-xs text-xl font-bold text-[#7b4a24] md:max-w-xl md:text-3xl">
+        Выбери игру
       </p>
 
-      <div className="mb-6 rounded-[32px] bg-white/75 px-6 py-4 shadow-xl">
-        <div className="text-3xl font-black">⭐ {progress.stars}</div>
-        <div className="text-base font-bold text-[#8a5a2c]">
-          твоих звёздочек
-        </div>
-      </div>
-
-      <div className="grid w-full max-w-sm gap-4">
+      <div className="grid w-full max-w-sm gap-4 md:max-w-xl">
         <button
           onClick={handlePlay}
-          className="min-h-[86px] rounded-[36px] bg-[#ff8a3d] px-8 text-4xl font-black text-white shadow-2xl active:scale-95"
+          className="flex min-h-[96px] items-center justify-center rounded-[38px] bg-[#ff8a3d] px-6 text-3xl font-black text-white shadow-2xl active:scale-95 md:min-h-[118px] md:text-5xl"
         >
-          🧩 Пазлы
+          🧩 Собрать пазл
         </button>
 
         <button
           onClick={handleFindDiff}
-          className="min-h-[86px] rounded-[36px] bg-[#8ee06e] px-8 text-3xl font-black text-[#234018] shadow-2xl active:scale-95"
+          className="flex min-h-[96px] items-center justify-center rounded-[38px] bg-[#8ee06e] px-6 text-3xl font-black text-[#234018] shadow-2xl active:scale-95 md:min-h-[118px] md:text-5xl"
         >
-          🔍 Найди отличия
+          🔍 Найти отличия
         </button>
       </div>
 
-      <div className="mt-5 grid w-full max-w-sm grid-cols-2 gap-3">
-        <button
-          onClick={toggleSound}
-          className="min-h-[72px] rounded-[28px] bg-white px-4 text-xl font-black shadow-xl active:scale-95"
-        >
-          {progress.sound ? "🔊 Музыка" : "🔇 Тихо"}
-        </button>
-
-        <button
-          onClick={toggleVoice}
-          className="min-h-[72px] rounded-[28px] bg-white px-4 text-xl font-black shadow-xl active:scale-95"
-        >
-          {progress.voice ? "🗣 Голос" : "🤫 Без голоса"}
-        </button>
+      <div className="mt-7 rounded-[32px] bg-white/75 px-6 py-4 shadow-xl">
+        <div className="text-3xl font-black md:text-5xl">
+          ⭐ {progress.stars}
+        </div>
+        <div className="text-base font-bold text-[#8a5a2c] md:text-xl">
+          звёздочек собрано
+        </div>
       </div>
     </div>
   );
