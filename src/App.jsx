@@ -5,6 +5,7 @@ import LevelSelect from "./components/LevelSelect.jsx";
 import PuzzleBoard from "./components/PuzzleBoard.jsx";
 import VictoryScreen from "./components/VictoryScreen.jsx";
 import FindDiffGame from "./components/FindDiffGame.jsx";
+import MazeGame from "./components/MazeGame.jsx";
 import { PUZZLES, LEVELS } from "./data/puzzles.js";
 import { addSolved, loadProgress, saveProgress } from "./lib/storage.js";
 import { playVictory, speak, startMusic, stopMusic } from "./lib/audio.js";
@@ -37,6 +38,11 @@ export default function App() {
   function startFindDiffGame() {
     startMusic(progress.sound);
     setScreen("find-diff");
+  }
+
+  function startMazeGame() {
+    startMusic(progress.sound);
+    setScreen("maze");
   }
 
   function chooseGame(puzzle, level) {
@@ -87,6 +93,7 @@ export default function App() {
               onProgress={setProgress}
               onPlay={startPuzzleMenu}
               onFindDiff={startFindDiffGame}
+              onMaze={startMazeGame}
             />
           </Screen>
         )}
@@ -131,6 +138,15 @@ export default function App() {
         {screen === "find-diff" && (
           <Screen keyName="find-diff">
             <FindDiffGame
+              progress={progress}
+              onBack={() => setScreen("home")}
+            />
+          </Screen>
+        )}
+
+        {screen === "maze" && (
+          <Screen keyName="maze">
+            <MazeGame
               progress={progress}
               onBack={() => setScreen("home")}
             />

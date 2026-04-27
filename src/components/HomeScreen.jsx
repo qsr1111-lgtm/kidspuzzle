@@ -6,7 +6,8 @@ export default function HomeScreen({
   progress,
   onProgress,
   onPlay,
-  onFindDiff
+  onFindDiff,
+  onMaze
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -52,6 +53,12 @@ export default function HomeScreen({
     playClick(progress.sound);
     speak("Найди отличия", progress.voice);
     onFindDiff();
+  }
+
+  function handleMaze() {
+    playClick(progress.sound);
+    speak("Лабиринт", progress.voice);
+    onMaze();
   }
 
   function toggleSettings() {
@@ -105,38 +112,45 @@ export default function HomeScreen({
           repeatDelay: 2.5,
           duration: 1.4
         }}
-        className="mb-5 flex h-40 w-40 items-center justify-center rounded-[48px] bg-orange-300 shadow-2xl md:h-52 md:w-52 md:rounded-[60px]"
+        className="mb-5 flex h-36 w-36 items-center justify-center rounded-[44px] bg-orange-300 shadow-2xl md:h-52 md:w-52 md:rounded-[60px]"
       >
-        <div className="text-8xl md:text-9xl">🐱</div>
+        <div className="text-7xl md:text-9xl">🐱</div>
       </motion.div>
 
-      <h1 className="mb-3 text-5xl font-black leading-none text-[#4a2a16] md:text-7xl">
+      <h1 className="mb-2 text-5xl font-black leading-none text-[#4a2a16] md:text-7xl">
         Давай
         <br />
         играть!
       </h1>
 
-      <p className="mb-7 max-w-xs text-xl font-bold text-[#7b4a24] md:max-w-xl md:text-3xl">
+      <p className="mb-5 max-w-xs text-xl font-bold text-[#7b4a24] md:max-w-xl md:text-3xl">
         Выбери игру
       </p>
 
-      <div className="grid w-full max-w-sm gap-4 md:max-w-xl">
+      <div className="grid w-full max-w-sm gap-3 md:max-w-xl">
         <button
           onClick={handlePlay}
-          className="flex min-h-[96px] items-center justify-center rounded-[38px] bg-[#ff8a3d] px-6 text-3xl font-black text-white shadow-2xl active:scale-95 md:min-h-[118px] md:text-5xl"
+          className="flex min-h-[86px] items-center justify-center rounded-[34px] bg-[#ff8a3d] px-6 text-3xl font-black text-white shadow-2xl active:scale-95 md:min-h-[112px] md:text-5xl"
         >
           🧩 Собрать пазл
         </button>
 
         <button
           onClick={handleFindDiff}
-          className="flex min-h-[96px] items-center justify-center rounded-[38px] bg-[#8ee06e] px-6 text-3xl font-black text-[#234018] shadow-2xl active:scale-95 md:min-h-[118px] md:text-5xl"
+          className="flex min-h-[86px] items-center justify-center rounded-[34px] bg-[#8ee06e] px-6 text-3xl font-black text-[#234018] shadow-2xl active:scale-95 md:min-h-[112px] md:text-5xl"
         >
           🔍 Найти отличия
         </button>
+
+        <button
+          onClick={handleMaze}
+          className="flex min-h-[86px] items-center justify-center rounded-[34px] bg-[#6ecbff] px-6 text-3xl font-black text-[#1e3a5f] shadow-2xl active:scale-95 md:min-h-[112px] md:text-5xl"
+        >
+          🧭 Лабиринт
+        </button>
       </div>
 
-      <div className="mt-7 rounded-[32px] bg-white/75 px-6 py-4 shadow-xl">
+      <div className="mt-5 rounded-[32px] bg-white/75 px-6 py-4 shadow-xl">
         <div className="text-3xl font-black md:text-5xl">
           ⭐ {progress.stars}
         </div>
