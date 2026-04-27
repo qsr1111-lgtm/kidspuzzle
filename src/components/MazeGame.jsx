@@ -69,7 +69,7 @@ function distanceToSegment(point, a, b) {
   return Math.hypot(px - closestX, py - closestY);
 }
 
-function isNearPath(point, path, tolerance = 10) {
+function isNearPath(point, path, tolerance = 11) {
   for (let i = 0; i < path.length - 1; i += 1) {
     const distance = distanceToSegment(point, path[i], path[i + 1]);
 
@@ -105,6 +105,8 @@ export default function MazeGame({ progress, onBack }) {
   const [warning, setWarning] = useState(false);
 
   const boardRef = useRef(null);
+  const activePointerId = useRef(null);
+
   const level = LEVELS[levelIndex];
   const start = level.path[0];
   const goal = level.path[level.path.length - 1];
@@ -120,35 +122,40 @@ export default function MazeGame({ progress, onBack }) {
     setDragging(false);
     setCompleted(false);
     setWarning(false);
+    activePointerId.current = null;
   }
 
-  function getPointFromEvent(event) {
+  function getPointFromPointer(event) {
     const rect = boardRef.current.getBoundingClientRect();
 
-    const clientX = event.touches?.[0]?.clientX ?? event.clientX;
-    const clientY = event.touches?.[0]?.clientY ?? event.clientY;
-
     return {
-      x: ((clientX - rect.left) / rect.width) * 100,
-      y: ((clientY - rect.top) / rect.height) * 100
+      x: ((event.clientX - rect.left) / rect.width) * 100,
+      y: ((event.clientY - rect.top) / rect.height) * 100
     };
   }
 
-  function handleDragStart(event) {
+  function handlePointerDown(event) {
     if (completed) return;
 
     event.preventDefault();
+    event.stopPropagation();
+
+    activePointerId.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+
     setDragging(true);
     playClick(progress.sound);
     speak("Веди котика", progress.voice);
   }
 
-  function handleDragMove(event) {
+  function handlePointerMove(event) {
     if (!dragging || completed) return;
+    if (activePointerId.current !== event.pointerId) return;
 
     event.preventDefault();
+    event.stopPropagation();
 
-    const point = getPointFromEvent(event);
+    const point = getPointFromPointer(event);
     const nearPath = isNearPath(point, level.path, 11);
 
     if (nearPath) {
@@ -163,9 +170,14 @@ export default function MazeGame({ progress, onBack }) {
     setCatPosition(nearest);
   }
 
-  function handleDragEnd() {
-    if (!dragging || completed) return;
+  function handlePointerUp(event) {
+    if (!dragging) return;
+    if (activePointerId.current !== event.pointerId) return;
 
+    event.preventDefault();
+    event.stopPropagation();
+
+    activePointerId.current = null;
     setDragging(false);
 
     const distanceToGoal = Math.hypot(
@@ -203,7 +215,7 @@ export default function MazeGame({ progress, onBack }) {
   }
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden px-3 py-3 sm:px-5">
+    <div className="no-page-drag flex h-[100dvh] max-h-[100dvh] w-screen max-w-screen flex-col overflow-hidden px-3 py-3 sm:px-5">
       <header className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <button
           onClick={onBack}
@@ -233,22 +245,17 @@ export default function MazeGame({ progress, onBack }) {
         Возьми котика и веди по дорожке
       </div>
 
-      <section className="flex min-h-0 flex-1 items-center justify-center">
+      <section className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         <motion.div
           animate={warning ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
           transition={{ duration: 0.25 }}
           ref={boardRef}
-          onMouseMove={handleDragMove}
-          onMouseUp={handleDragEnd}
-          onMouseLeave={handleDragEnd}
-          onTouchMove={handleDragMove}
-          onTouchEnd={handleDragEnd}
-          className="relative aspect-square w-full max-w-[min(92vw,72vh,720px)] overflow-hidden rounded-[42px] bg-[#fff4c7] shadow-2xl"
+          className="no-page-drag relative aspect-square w-full max-w-[min(92vw,72vh,720px)] overflow-hidden rounded-[42px] bg-[#fff4c7] shadow-2xl"
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#ffffff_0,#ffffff_10%,transparent_11%),radial-gradient(circle_at_75%_30%,#ffffff_0,#ffffff_8%,transparent_9%),radial-gradient(circle_at_35%_80%,#ffffff_0,#ffffff_7%,transparent_8%)] opacity-50" />
 
           <svg
-            className="absolute inset-0 h-full w-full"
+            className="pointer-events-none absolute inset-0 h-full w-full"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
@@ -282,7 +289,7 @@ export default function MazeGame({ progress, onBack }) {
           </svg>
 
           <div
-            className="absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
+            className="pointer-events-none absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
             style={{
               left: `${start.x}%`,
               top: `${start.y}%`
@@ -294,7 +301,7 @@ export default function MazeGame({ progress, onBack }) {
           <motion.div
             animate={completed ? { scale: [1, 1.25, 1] } : { scale: [1, 1.08, 1] }}
             transition={{ repeat: Infinity, duration: completed ? 0.6 : 1.2 }}
-            className="absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
+            className="pointer-events-none absolute flex h-[82px] w-[82px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-4xl shadow-xl md:h-[108px] md:w-[108px] md:text-6xl"
             style={{
               left: `${goal.x}%`,
               top: `${goal.y}%`
@@ -304,8 +311,10 @@ export default function MazeGame({ progress, onBack }) {
           </motion.div>
 
           <motion.button
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             animate={{
               left: `${catPosition.x}%`,
               top: `${catPosition.y}%`,
@@ -316,13 +325,13 @@ export default function MazeGame({ progress, onBack }) {
               stiffness: 420,
               damping: 28
             }}
-            className="absolute z-30 flex h-[86px] w-[86px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-300 text-5xl shadow-2xl active:scale-110 md:h-[112px] md:w-[112px] md:text-7xl"
+            className="no-page-drag absolute z-30 flex h-[86px] w-[86px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-300 text-5xl shadow-2xl active:scale-110 md:h-[112px] md:w-[112px] md:text-7xl"
           >
             🐱
           </motion.button>
 
           {warning && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-[28px] bg-white/95 px-5 py-3 text-xl font-black text-[#8a5a2c] shadow-xl">
+            <div className="pointer-events-none absolute bottom-5 left-1/2 -translate-x-1/2 rounded-[28px] bg-white/95 px-5 py-3 text-xl font-black text-[#8a5a2c] shadow-xl">
               По дорожке 😊
             </div>
           )}
@@ -331,7 +340,7 @@ export default function MazeGame({ progress, onBack }) {
             <motion.div
               initial={{ opacity: 0, scale: 0.75, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="absolute inset-x-5 bottom-5 rounded-[34px] bg-white/95 px-5 py-4 text-center shadow-2xl"
+              className="pointer-events-none absolute inset-x-5 bottom-5 rounded-[34px] bg-white/95 px-5 py-4 text-center shadow-2xl"
             >
               <div className="text-5xl">🎉</div>
               <div className="text-3xl font-black text-[#ff7a2f]">
